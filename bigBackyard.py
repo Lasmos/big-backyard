@@ -1,38 +1,43 @@
 import os
 import enum
 import random
+import copy
+import sys
+#import array
 
 #initialize gamewide variables
 #read the instructions!
-game_instructions = "Type 'c' to try catching the bug that's here.\n Type 'l' to look for a different bug.\nType 'i' to check your inventory.\nType 'e' to quit the game."
+game_instructions = "Type 'c' to try catching the bug that's here.\n Type 'l' to look for a different bug.\nType 'i' to check your inventory.\nType 's' to sell your bugs to the shopkeeper.\nType 'e' to quit the game."
+
+money = 0
+
+
+
+
+
+#bug-related initializations
 
 #bugs ever caught
-caught_bugs_ever = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]#11
+caught_bugs_ever = []#number of bugs ever caught arranged by bug type and in the same order
 
 #bugs currently held
-held_bugs_now = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]#11
+held_bugs_now = []#number of bugs currently held arranged by bug type and in the same order
 
 #player stats
-player_stats = [1,1,1]#jumping, aiming, and bargaining - add spotting?
+player_stats = [1,1,1]#jumping, aiming, and bargaining
 
 #count each bug instance
-every_bug = 0
-every_bug_type = 0
+every_bug = 0#not currently used - is it needed?
+every_bug_type = 0#used in giverandombug to tell how many bug types there are
 
 #hold onto each bug type
 every_bug_list = []
 
-
-
-
-#initialize game classes
-#create an enum for bug sizes
+#enum for bug sizes
 class Sizes (enum.Enum):
     TINIER = 1
     TINY = 2
     SMALL = 3
-
-
 
 
 #create bugs class
@@ -52,27 +57,119 @@ class Bug ():
         self.size = enumsize
         every_bug_type += 1
         every_bug_list.append(self)
+        caught_bugs_ever.append(0)
+        held_bugs_now.append(0)
         
 
 #create bugs
-morpho = Bug(1, "Blue Morpho", "Blue Morphos", "A high-flying bright blue butterfly flits here.", [5,4,5,5], Sizes.SMALL)
-painted = Bug(2, "Painted Lady", "Painted Ladies", "An orange butterfly with large black splotches has settled on a branch.", [2,2,2,2], Sizes.TINY)
-monarch = Bug(3, "Monarch", "Monarchs", "A bright orange-and black butterfly dashes about.", [2,1,1,1], Sizes.TINY)
+morpho = Bug(0, "Blue Morpho", "Blue Morphos", "A high-flying bright blue butterfly flits here.", [5,4,5,5], Sizes.SMALL)
+painted = Bug(1, "Painted Lady", "Painted Ladies", "An orange butterfly with large black splotches has settled on a branch.", [2,2,2,2], Sizes.TINY)
+monarch = Bug(2, "Monarch", "Monarchs", "A bright orange-and black butterfly dashes about.", [2,1,1,1], Sizes.TINY)
 
 #bug-related methods
 def tradeidforbug(bugid):
     for element in every_bug_list:
         if(element.id == bugid):
             return element
-    return monarch
 
 def giverandombug():
-    return tradeidforbug(random.randint(1,every_bug_type))
+    return tradeidforbug(random.randint(0,(every_bug_type - 1)))
 
 
 
 
 
+
+
+
+
+
+#shopkeeper-related initializations
+#every shopkeeper
+every_shopkeeper_list = []
+
+#enum for shopkeeper pronouns
+class Pronoun (enum.Enum):
+    FEMININE = 1
+    MASCULINE = 2
+    PLURAL = 3
+
+
+#create Shopkeepers class
+class Shopkeeper ():
+    "These people are SUPER interested in your bugs."
+    
+    #every shopkeeper has these
+    def __init__(self, number, word, word2, apronoun, stringwords, stringwords2, stringwords3, intarray2):
+        global every_shopkeeper_list
+        
+        self.id = number
+        self.name = word
+        self.title = word2
+        self.pronoun = apronoun
+        self.shopkeeperdescription = stringwords
+        self.behavior = stringwords2
+        self.shopdescription = stringwords3
+        #self.deals = intarray how do I handle making deals?
+        self.wishes = intarray2
+        every_shopkeeper_list.append(self)
+
+#create shopkeepers
+vanessa = Shopkeeper(0, "Vanessa", "The Picky", Pronoun.FEMININE, "willowy blonde wearing lipstick, heels, and a large assortment of jewelry", "raises a perfectly-manicured brow at you and rests her elbows on the stainless-steel counter", "gigantic, bejeweled boudoir with display cases of shiny things everywhere", [5, 1, 5])
+valerie = Shopkeeper(1, "Valerie", "The Newbie", Pronoun.FEMININE, "dark-haired oversized teenage girl with acne", "dashes up to the rickety wooden counter wheezing", "tiny shack with a counter out front", [2, 2, 5])
+virgil = Shopkeeper(2, "Virgil", "The Edgelord", Pronoun.MASCULINE, "tall figure in a black cloak that hides their face in shadow", "looms menacingly over the black marble counter", "fabric-draped and incense-scented building lit dimly with candles", [2, 2, 2])
+
+
+#shopkeeper-related methods
+def tradeidforshopkeeper(shopkeeperid):
+    for shopkeeper in every_shopkeeper_list:
+        if(shopkeeper.id == shopkeeperid):
+            return shopkeeper
+    
+def giverandomshopkeeper():
+    return tradeidforshopkeeper(random.randint(1,len(every_shopkeeper_list)))
+
+def showtheshop(shopkeeper):
+    theperson = "he asks. "
+    if(shopkeeper.pronoun == Pronoun.FEMININE):
+        theperson = "she asks. "
+    elif(shopkeeper.pronoun == Pronoun.PLURAL):
+        theperson = "they ask. "
+    
+    telluser("The shop is a " + shopkeeper.shopdescription + ". ")
+    telluser("A " + shopkeeper.shopkeeperdescription + " " + shopkeeper.behavior + ". ")
+    telluser("'Do you want to sell?' " + theperson)
+
+def givemoney(shopkeeper, currentbugs, allbugs):
+    global money 
+    
+    moneycounter = 0
+    for bugtype in allbugs:
+        if(currentbugs[bugtype.id] > 0):
+            moneycounter += (shopkeeper.wishes[bugtype.id - 1] * bugtype.stats[3])
+    money += moneycounter
+    return moneycounter
+
+
+
+
+
+bug_directions = {
+    "right": ["x", 1],
+    "left": ["x", -1],
+    "up": ["y", 1],
+    "down": ["y", -1],
+    "away": ["z", 1],
+    "toward": ["z", -1],
+}
+world_directions = {
+    "east": ["x", 1],
+    "west": ["x", -1],
+    "north": ["y", 1],
+    "south": ["y", -1],
+    "outside": ["z", 1],
+    "inside": ["z", -1],
+}
 
 
 #general methods
@@ -111,6 +208,8 @@ def iscaught(theBug):
     global held_bugs_now
     global caught_bugs_ever
     
+    print("bug's ID# is " + str(theBug.id) + ".\n")
+    
     telluser("You got it!")
     
     held_bugs_now[theBug.id] += 1
@@ -147,6 +246,11 @@ def telluser(astring):
     print(astring)
 
 
+
+
+
+
+#inventory methods
 def addinventory(currentbugs):
     addingup = 0
     for eachbugtype in currentbugs:
@@ -187,9 +291,12 @@ telluser(game_instructions)
 #randomize the first bug to show
 current_bug = giverandombug()
 
+#randomize the game's shopkeeper
+shopkeep = giverandomshopkeeper()
+
 #main game loop
 user_uses = True
-while(user_uses): 
+while(user_uses):
     
     #tell user what they have right now
     if(addinventory(held_bugs_now) > 20):
@@ -198,7 +305,7 @@ while(user_uses):
         telluser("Wow, you have SO MANY bugs!")
     
     #tell user what's here right now
-    if(current_bug == None):
+    if(current_bug is None):
         telluser("\nThere is no bug here right now. Look for one!")
     else:
         telluser("\n" + current_bug.description)
@@ -235,6 +342,51 @@ while(user_uses):
         #list the bugs they currently have
         inventory(held_bugs_now, every_bug_list)
     
+    #if the user wants to sell their stock,
+    elif(state == 's' or state == 'S'):
+        #describe the shop and shopkeeper
+        showtheshop(shopkeep)
+        #ask for user's decision
+        innerstate = input("\nType 'y' for yes or 'n' for no.")
+        #wait for user's decision
+        willusersell = True
+        while(willusersell):
+            #if the user decides to sell,
+            if(innerstate == 'y' or innerstate == 'Y'):
+                #check if user actually has any bugs
+                if(addinventory(held_bugs_now) == 0):
+                    telluser("'What, you don't have any? Shoo. Come back when you have bugs to sell.'")
+                    willusersell = False
+                else:
+                    #acknowledge the decision,
+                    telluser("'Great! Here's your money.'")
+                    #give them money for their bugs,
+                    newmoney = givemoney(shopkeep, held_bugs_now, every_bug_list)
+                    #tell them how much they got,
+                    telluser("\nYou got " + str(newmoney) + " pennies!")
+                    telluser("You now have " + str(money) + " pennies.")
+                    #erase all bugs from the user's inventory,
+                    for eachbug in every_bug_list:
+                        held_bugs_now[eachbug.id] = 0
+                    print("You now have these bugs: " + str(held_bugs_now))
+                    #then end selling loop.
+                    willusersell = False
+            #if the user doesn't want to sell,
+            elif(innerstate == 'n' or innerstate == 'N'):
+                #acknowledge the decision,
+                telluser("'Too bad. Another time, then.'")
+                #then end selling loop.
+                willusersell = False
+            #if the user wants to exit the game,
+            elif(innerstate == 'e' or innerstate == 'E'):
+                #give exit message,
+                telluser("Okay. Goodbye, then.")
+                #then close the program.
+                sys.exit()
+            else:
+                telluser("'Do you want to sell or not? I don't have time for this.'")
+                #don't end selling loop until they make a decision.
+    
     #if the user inputs anything else,
     else:
         #tell them to pay attention this time
@@ -248,18 +400,16 @@ while(user_uses):
 
 
 
-
-
 """
 plans and stuff:
 -make bugs dodging you more interesting - /why/ did it escape?
 -give a you-caught-the-bug message
--what does your inventory look like?
--test the bug-catching system
+-what does your inventory look like? it's a pouch of some sort. maybe make it upgradeable so you can only put a few bugs in it at first. that limits your exploration time by your caught bugs at first or you have to leave bugs behind.
 -player stats: jumping, aiming, and bargaining
     jumping makes you able to catch bugs that fly too high
     aiming makes the chance of missing lower
     bargaining gives you a better chance of good deals from shopkeepers
+   add a stealth stat?
 -bug stats: height, swiftness, irregularity, value
     height makes them able to avoid you by going up
     swiftness makes them generally harder to catch
@@ -269,8 +419,9 @@ plans and stuff:
 -a boolean array for key items, you have it or you don't; the encyclopedia, types and levels of equipment?
 -make a bug encyclopedia - what bugs have you caught before? how do you identify what bugs you have?
 -make bug size matter - different nets are required to catch the smallest bugs and the larger bugs, and the largest ones need a different item entirely
+-how to place the shopkeepers? for now just randomize which one you're working with for the whole game
 -make bug catching directional?
--make shopkeepers to sell bugs to
+-make selling bugs more choosy - what if you don't want to sell them all?
 -make different spaces with different bugs
 -make a 'home base'?
 -make a training space, or just train stats with use? both?
@@ -279,7 +430,9 @@ plans and stuff:
 -make lots more bugs
 -make bugs run away at some point? after a certain number of attempts?
 -WHERE IS GRANDPA
--what is the central struggle for this game? the main thing is to collect them all and get lots of money... but why? maybe your complete bug collection can get some money for Grandpa to help with his money problems. no, not the complete collection but one specific bug - diamond bug, or something. it's in a far away place that we have to figure out how to get to. 
--maybe the shopkeepers can reference how odd it is that they're here paying so much money for bugs?
+-what is the central struggle for this game? the main thing is to collect them all and get lots of money... but why? maybe your complete bug collection can get some money for Grandpa to help with his money problems. no, not the complete collection but one specific bug - diamond bug, or something. it's in a far away place that we have to figure out how to get to and specialized equipment to catch.
+-give shopkeepers their own yes/no/thank-you-come-again responses
+-maybe the shopkeepers can reference how odd it is that they're here paying so much money for bugs? lampshade
+-make later areas' bugs move but first area bugs stay still to get you used to catching them
 
 """
